@@ -1,2 +1,78 @@
-# Harmscan_AI
-Hướng dẫn cài đặt và chạy dự án phát hiện nội dung độc hại trong video. Tạo thư mục dự án, ví dụ `Harmscan_AI`. Trong thư mục này, tạo môi trường ảo Python (Python 3.10+) với tên `process_video` bằng lệnh `python -m venv process_video`. Kích hoạt môi trường ảo: Windows: `process_video\Scripts\activate`, macOS/Linux: `source process_video/bin/activate`. Cài đặt tất cả thư viện Python từ file `requirements.txt` bằng lệnh `pip install -r requirements.txt`. Chuyển vào thư mục server và cài đặt dependencies Node.js bằng `cd server` và `npm install`. Tạo file `.env` trong thư mục server và thêm các biến môi trường: `OPENAI_API_KEY=your_api_key_here` và `password_portSQL=your_postgres_password`. Cuối cùng, chạy server Node.js bằng lệnh `node server.js`. Sau khi server khởi động, dự án đã sẵn sàng để sử dụng.
+# harmscan ai
+
+hướng dẫn cài đặt và chạy dự án harmscan ai
+
+## yêu cầu hệ thống
+
+- python 3.10 hoặc cao hơn
+- node.js và npm
+- postgresql
+
+## hướng dẫn cài đặt
+
+### 1. tạo thư mục dự án
+
+```bash
+mkdir Harmscan_AI
+cd Harmscan_AI
+```
+
+### 2. thiết lập môi trường python
+
+tạo môi trường ảo với tên `process_video`:
+
+```bash
+python -m venv process_video
+```
+
+### 3. kích hoạt môi trường ảo
+
+**windows:**
+```bash
+process_video\Scripts\activate
+```
+
+**macos/linux:**
+```bash
+source process_video/bin/activate
+```
+
+### 4. cài đặt thư viện python
+
+```bash
+pip install -r requirements.txt
+```
+
+### 5. cài đặt dependencies cho server
+
+chuyển đến thư mục server và cài đặt các package npm:
+
+```bash
+cd server
+npm install
+```
+
+### 6. cấu hình môi trường
+
+tạo file `.env` trong thư mục `server` và thêm các thông tin sau:
+
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+POSTGRES_PASSWORD=your_postgres_password_here
+```
+
+**lưu ý:** thay thế `your_openai_api_key_here` và `your_postgres_password_here` bằng thông tin thực tế của bạn.
+
+### 7. chạy server
+
+```bash
+node server.js
+```
+
+## hoàn tất
+
+server đã sẵn sàng hoạt động! 🚀
+
+## liên hệ
+
+nếu có bất kỳ vấn đề gì, vui lòng tạo issue trong repository này.

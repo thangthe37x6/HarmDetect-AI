@@ -52,7 +52,22 @@ cd server
 npm install
 ```
 
-### 6. cấu hình môi trường
+### 6. tải model
+
+do file model `best_violence_model.pt` có dung lượng lớn (79.20 MB), bạn cần tải về từ google drive:
+
+**[📥 tải model tại đây](https://drive.google.com/drive/folders/1fq2CfY75H4PTY2ZcbCwTxbX1m9cFl8_h?usp=sharing)**
+
+sau khi tải về, đặt file `best_violence_model.pt` vào thư mục `server/`:
+
+```
+server/
+  ├── best_violence_model.pt  ← đặt file model vào đây
+  ├── server.js
+  └── ...
+```
+
+### 7. cấu hình môi trường
 
 tạo file `.env` trong thư mục `server` và thêm các thông tin sau:
 
@@ -63,7 +78,7 @@ POSTGRES_PASSWORD=your_postgres_password_here
 
 **lưu ý:** thay thế `your_openai_api_key_here` và `your_postgres_password_here` bằng thông tin thực tế của bạn.
 
-### 7. chạy server
+### 8. chạy server
 
 ```bash
 node server.js

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="vi" class="">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoGuard - Phân tích video thông minh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* ép các box cùng hàng cao bằng nhau */
+        #result-content .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            /* tương đương gap-2 */
+        }
+
+        #result-content .grid>div {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            /* nội dung cân dưới */
+            height: 100%;
+        }
+
+        /* thu nhỏ padding, tránh lệch */
+        #result-content .grid>div>.space-y-0\.5 {
+            margin-top: auto;
+        }
+
+
+        .modal {
+            display: none;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #000 var(--progress, 0%), transparent var(--progress, 0%));
+        }
+
+        .dark .progress-bar {
+            background: linear-gradient(90deg, #fff var(--progress, 0%), transparent var(--progress, 0%));
+        }
+
+        .toast {
+            transform: translateY(-100px);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        /* Custom slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .dark input[type="range"] {
+            background: #4b5563;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #000;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .dark input[type="range"]::-webkit-slider-thumb {
+            background: #fff;
+        }
+    </style>
+</head>
+
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
+    <!-- Toast Notification -->
+    <div id="toast"
+        class="toast fixed top-4 right-4 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-lg shadow-lg z-50">
+        <span id="toast-message">Thông báo</span>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-black dark:border-white mx-auto"></div>
+            <p class="mt-2 text-center">Đang xử lý...</p>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="font-bold text-xl cursor-pointer" onclick="showPage('home')">VideoGuard</div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <button onclick="showPage('home')"
+                            class="px-3 py-2 text-sm font-medium hover:text-gray-600 dark:hover:text-gray-300">Trang
+                            chủ</button>
+                        <button onclick="showPage('analyze')"
+                            class="px-3 py-2 text-sm font-medium hover:text-gray-600 dark:hover:text-gray-300">Phân
+                            tích</button>
+                        <button onclick="showPage('history')"
+                            class="px-3 py-2 text-sm font-medium hover:text-gray-600 dark:hover:text-gray-300"
+                            id="history-nav" style="display:none;">Lịch sử</button>
+                        <button onclick="showPage('about')"
+                            class="px-3 py-2 text-sm font-medium hover:text-gray-600 dark:hover:text-gray-300">Giới
+                            thiệu</button>
+                        <button onclick="showPage('help')"
+                            class="px-3 py-2 text-sm font-medium hover:text-gray-600 dark:hover:text-gray-300">Trợ
+                            giúp</button>
+                    </div>
+                </div>
+
+                <!-- Right Menu -->
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                        id="theme-toggle">🌙</button>
+                    <div id="auth-buttons">
+                        <button onclick="showAuthModal('login')"
+                            class="px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">Đăng
+                            nhập</button>
+                        <button onclick="showAuthModal('register')"
+                            class="px-4 py-2 text-sm font-medium bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200">Đăng
+                            ký</button>
+                    </div>
+                    <div id="user-menu" style="display:none;" class="relative">
+                        <button onclick="toggleUserMenu()"
+                            class="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <span id="user-name">User</span>
+                            <span>▼</span>
+                        </button>
+                        <div id="user-dropdown"
+                            class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 hidden">
+                            <button onclick="showPage('profile')"
+                                class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg">Profile</button>
+                            <button onclick="logout()"
+                                class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg">Đăng
+                                xuất</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-lg w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="auth-title" class="text-2xl font-bold">Đăng nhập</h2>
+                <button onclick="hideAuthModal()" class="text-2xl hover:text-gray-600">&times;</button>
+            </div>
+            <form id="auth-form" onsubmit="handleAuth(event)">
+                <div class="mb-4">
+                    <input type="email" id="email" placeholder="Email" required
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:border-black dark:focus:border-white">
+                </div>
+                <div class="mb-4">
+                    <input type="password" id="password" placeholder="Mật khẩu" required
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:border-black dark:focus:border-white">
+                </div>
+                <div id="confirm-password-field" class="mb-4 hidden">
+                    <input type="password" id="confirm-password" placeholder="Xác nhận mật khẩu"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:border-black dark:focus:border-white">
+                </div>
+                <button type="submit" id="auth-submit"
+                    class="w-full bg-black dark:bg-white text-white dark:text-black py-2 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 font-medium">Đăng
+                    nhập</button>
+            </form>
+            <p class="mt-4 text-center text-sm">
+                <span id="auth-switch-text">Chưa có tài khoản?</span>
+                <button id="auth-switch-btn" onclick="switchAuthMode()" class="text-blue-600 hover:underline ml-1">Đăng
+                    ký ngay</button>
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="pt-16 min-h-screen">
+        <!-- Home Page -->
+        <div id="home-page" class="page">
+            <section class="py-20 px-4 text-center">
+                <div class="max-w-4xl mx-auto">
+                    <h1 class="text-5xl font-bold mb-6">VideoGuard</h1>
+                    <p class="text-xl text-gray-600 dark:text-gray-400 mb-8">Phân tích video thông minh với AI</p>
+                    <p class="text-lg mb-10">Phát hiện nội dung bạo lực, vũ khí và các yếu tố có hại trong video một
+                        cách tự động</p>
+                    <button onclick="showPage('analyze')"
+                        class="bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-lg text-lg font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors">
+                        Bắt đầu phân tích ngay
+                    </button>
+                </div>
+            </section>
+
+            <section class="py-16 px-4">
+                <div class="max-w-6xl mx-auto">
+                    <h2 class="text-3xl font-bold text-center mb-12">Tính năng chính</h2>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="text-center p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+                            <div class="text-4xl mb-4">📤</div>
+                            <h3 class="text-xl font-semibold mb-2">Upload dễ dàng</h3>
+                            <p class="text-gray-600 dark:text-gray-400">Kéo thả file video để phân tích nhanh chóng</p>
+                        </div>
+                        <div class="text-center p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+                            <div class="text-4xl mb-4">🤖</div>
+                            <h3 class="text-xl font-semibold mb-2">Phân tích AI</h3>
+                            <p class="text-gray-600 dark:text-gray-400">Phát hiện tự động nội dung bạo lực và vũ khí</p>
+                        </div>
+                        <div class="text-center p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+                            <div class="text-4xl mb-4">📊</div>
+                            <h3 class="text-xl font-semibold mb-2">Báo cáo chi tiết</h3>
+                            <p class="text-gray-600 dark:text-gray-400">Kết quả phân tích với timeline và điểm số</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+ <!-- Analyze Page - NEW DESIGN -->
+<div id="analyze-page" class="page hidden">
+    <div class="max-w-7xl mx-auto p-6">
+        <h1 class="text-3xl font-bold mb-8">Phân tích video</h1>
+
+        <!-- STEP 1: Upload & Config (GRID LAYOUT) -->
+        <div id="upload-section" class="mb-8">
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- LEFT: Upload Box (2 columns) -->
+                <div class="md:col-span-2 space-y-4">
+                    <!-- Upload Zone -->
+                    <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                        <input type="file" id="file-input" accept="video/*" class="hidden" onchange="handleFileUpload(event)">
+                        <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="cursor-pointer">
+                            <div class="text-4xl mb-4">📤</div>
+                            <p class="text-lg mb-2">Kéo thả video vào đây hoặc click để chọn</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Hỗ trợ MP4, AVI, MOV (tối đa 100MB)</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Selected File Info -->
+                    <div id="file-info" class="hidden p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🎬</span>
+                                <div>
+                                    <p class="font-semibold" id="file-name">video.mp4</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400" id="file-size">0 MB</p>
+                                </div>
+                            </div>
+                            <button onclick="clearFile()" class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                                ✕ Xóa
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ✅ VIDEO PREVIEW - ĐẶT TRONG CÙNG COLUMN VỚI UPLOAD -->
+                    <div id="video-section" class="hidden">
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                            <video id="video-player" controls class="w-full max-h-[400px] bg-black">
+                                <source id="video-source" src="" type="video/mp4">
+                                Trình duyệt không hỗ trợ video.
+                            </video>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Config Panel (1 column) - LUÔN Ở BÊN PHẢI -->
+                <div class="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 h-fit sticky top-20">
+                    <h3 class="text-lg font-semibold mb-4">⚙️ Cấu hình</h3>
+                    
+                    <!-- LLM Toggle -->
+                    <div class="mb-6">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" id="use-llm" class="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-2 focus:ring-purple-500">
+                            <span class="ml-3">
+                                <span class="font-semibold block">Phân tích AI nâng cao</span>
+                                <span class="text-xs text-gray-600 dark:text-gray-400">Sử dụng LLM (chậm hơn)</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Analyze Button -->
+                    <button id="analyze-btn" onclick="startAnalysisProcess()" disabled
+                        class="w-full bg-black dark:bg-white text-white dark:text-black py-3 rounded-lg font-semibold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        🚀 Bắt đầu phân tích
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: Progress (ĐẶT NGOÀI GRID) -->
+        <div id="progress-section" class="hidden mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">🔄 Đang phân tích video...</h3>
+                    <span id="progress-percent" class="text-2xl font-bold">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-2">
+                    <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="progress-text" class="text-sm text-gray-600 dark:text-gray-400 text-center">Đang khởi động...</p>
+            </div>
+        </div>
+
+        <!-- STEP 4: DASHBOARD RESULTS -->
+        <div id="results-section" class="hidden">
+            <!-- Header Actions -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">📊 Bảng phân tích</h2>
+                <div class="flex gap-3">
+                    <button onclick="saveToHistory()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors">
+                        💾 Lưu lịch sử
+                    </button>
+                    <button onclick="resetAnalysis()" class="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        🔄 Phân tích mới
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Content (JS sẽ render) -->
+            <div id="dashboard-content">
+                <!-- Nội dung dashboard sẽ được render bởi displayResults() -->
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- History Page -->
+        <div id="history-page" class="page hidden">
+            <div class="max-w-6xl mx-auto p-6">
+                <h1 class="text-3xl font-bold mb-8">Lịch sử phân tích</h1>
+
+                <div class="overflow-x-auto">
+                    <table
+                        class="w-full border-collapse border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                        <thead>
+                            <tr class="bg-gray-50 dark:bg-gray-800">
+                                <th class="border border-gray-300 dark:border-gray-600 p-3 text-left">Tên video</th>
+                                <th class="border border-gray-300 dark:border-gray-600 p-3 text-left">Ngày</th>
+                                <th class="border border-gray-300 dark:border-gray-600 p-3 text-left">Kết quả</th>
+                                <th class="border border-gray-300 dark:border-gray-600 p-3 text-left">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table">
+                            <tr>
+                                <td colspan="4"
+                                    class="border border-gray-300 dark:border-gray-600 p-8 text-center text-gray-500">
+                                    Chưa có lịch sử phân tích nào
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="profile-page" class="page hidden">
+            <div class="max-w-2xl mx-auto p-6">
+                <h1 class="text-3xl font-bold mb-8">Profile</h1>
+
+                <div class="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Thông tin cá nhân</h3>
+                    <div class="space-y-2">
+                        <p><strong>Email:</strong> <span id="profile-email">user@example.com</span></p>
+                        <p><strong>Ngày tham gia:</strong> <span id="profile-date">24/09/2025</span></p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold mb-4">Thống kê</h3>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-black dark:text-white" id="profile-videos">0</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Video đã phân tích</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Page -->
+        <div id="about-page" class="page hidden">
+            <div class="max-w-4xl mx-auto p-6">
+                <h1 class="text-3xl font-bold mb-8">Giới thiệu VideoGuard</h1>
+
+                <div class="space-y-8">
+                    <section>
+                        <h2 class="text-2xl font-semibold mb-4">Về dự án</h2>
+                        <div class="text-gray-600 dark:text-gray-400 space-y-4">
+                            <p>VideoGuard là ứng dụng phân tích video thông minh sử dụng công nghệ AI để phát hiện nội
+                                dung bạo lực, vũ khí và các yếu tố có hại khác trong video.</p>
+                            <p>Dự án được phát triển như một đồ án tốt nghiệp, nhằm ứng dụng công nghệ machine learning
+                                và computer vision vào việc kiểm duyệt nội dung tự động.</p>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2 class="text-2xl font-semibold mb-4">Công nghệ sử dụng</h2>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                                <h3 class="font-semibold mb-2">Frontend</h3>
+                                <p class="text-gray-600 dark:text-gray-400">HTML5, JavaScript, Tailwind CSS</p>
+                            </div>
+                            <div class="border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                                <h3 class="font-semibold mb-2">Backend</h3>
+                                <p class="text-gray-600 dark:text-gray-400">Node.js, Express, FastAPI</p>
+                            </div>
+                            <div class="border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                                <h3 class="font-semibold mb-2">Database</h3>
+                                <p class="text-gray-600 dark:text-gray-400">PostgreSQL</p>
+                            </div>
+                            <div class="border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                                <h3 class="font-semibold mb-2">AI/ML</h3>
+                                <p class="text-gray-600 dark:text-gray-400">Computer Vision, Deep Learning</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Page -->
+        <div id="help-page" class="page hidden">
+            <div class="max-w-4xl mx-auto p-6">
+                <h1 class="text-3xl font-bold mb-8">Trợ giúp & FAQ</h1>
+
+                <div class="space-y-6">
+                    <div class="border border-gray-200 dark:border-gray-700 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-2">Làm thế nào để upload video?</h3>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            Bạn có thể kéo thả file video trực tiếp vào ô upload hoặc click để chọn file từ máy tính.
+                        </p>
+                    </div>
+
+                    <div class="border border-gray-200 dark:border-gray-700 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-2">Các định dạng video nào được hỗ trợ?</h3>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            VideoGuard hỗ trợ các định dạng phổ biến như MP4, AVI, MOV với kích thước tối đa 100MB.
+                        </p>
+                    </div>
+
+                    <div class="border border-gray-200 dark:border-gray-700 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-2">Ngưỡng phát hiện là gì?</h3>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            Ngưỡng phát hiện quyết định độ nhạy của thuật toán. Giá trị cao (0.8-1.0) cho kết quả chính
+                            xác hơn nhưng có thể bỏ sót.
+                            Giá trị thấp (0.1-0.5) phát hiện nhiều hơn nhưng có thể có false positive.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-50 dark:bg-gray-800 py-8 mt-16">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <h4 class="font-semibold mb-4">VideoGuard</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Ứng dụng phân tích video thông minh
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Liên kết</h4>
+                    <div class="space-y-2 text-sm">
+                        <p class="text-gray-600 dark:text-gray-400">Privacy Policy</p>
+                        <p class="text-gray-600 dark:text-gray-400">Terms of Service</p>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Kết nối</h4>
+                    <div class="space-y-2 text-sm">
+                        <p class="text-gray-600 dark:text-gray-400">GitHub</p>
+                        <p class="text-gray-600 dark:text-gray-400">LinkedIn</p>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Liên hệ</h4>
+                    <div class="space-y-2 text-sm">
+                        <p class="text-gray-600 dark:text-gray-400">support@videoguard.com</p>
+                    </div>
+                </div>
+            </div>
+            <div
+                class="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 text-center text-sm text-gray-600 dark:text-gray-400">
+                © 2025 VideoGuard | Đồ án tốt nghiệp
+            </div>
+        </div>
+    </footer>
+    <script src="/js/script.js"></script>
+</body>
+
+</html>

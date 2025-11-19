@@ -2,7 +2,7 @@ import { Sequelize } from "sequelize";
 import dotenv from 'dotenv';
 dotenv.config();
 const password_portsql = process.env.password_portSQL || null
-const sequelize = new Sequelize("postgres", "postgres", String(password_portsql), {
+const sequelize = new Sequelize("postgres", "postgres", password_portsql, {
   host: "localhost",
   dialect: "postgres",
   logging: false, 

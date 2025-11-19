@@ -73,7 +73,7 @@ tạo file `.env` trong thư mục `server` và thêm các thông tin sau:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
-POSTGRES_PASSWORD=your_postgres_password_here
+password_portSQL=your_postgres_password_here
 ```
 
 **lưu ý:** thay thế `your_openai_api_key_here` và `your_postgres_password_here` bằng thông tin thực tế của bạn.
@@ -91,3 +91,4 @@ server đã sẵn sàng hoạt động! 🚀
 ## liên hệ
 
 nếu có bất kỳ vấn đề gì, vui lòng tạo issue trong repository này.
+
